@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <HTTPClient.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -17,6 +18,9 @@ String dataIn;
 
 const char *ssid = "KARAN";
 const char *password = "12345679";
+
+HTTPClient http;
+String url = "http://192.168.20.45:3001/";
 
 void displayData(String data)
 {
@@ -52,28 +56,35 @@ void seperator(String data)
   int count = 0;
 
   String dataForDisplay = "";
-
+  String jsonSend ="{\"fase\":";
   while (token != NULL)
   {
     switch (count)
     {
     case 1:
       dataForDisplay += String(token) +"\n";
+      Serial.println(String(token));
+      jsonSend +="\""+ String(token) + "\",";
       break;
     case 2:
       dataForDisplay += ifElse(String(token), "Voltage", "V");
+      jsonSend += "\"voltage\":\""+ String(token) + "\",";
       break;
     case 3:
       dataForDisplay += ifElse(String(token), "Current", "A");
+      jsonSend += "\"current\":\""+ String(token) + "\",";
       break;
     case 4:
       dataForDisplay += ifElse(String(token), "Power", "W");
+      jsonSend += "\"power\":\"" + String(token) + "\",";
       break;
     case 5:
       dataForDisplay += ifElse(String(token), "Energy", "kWh");
+      jsonSend += "\"energy\":\"" + String(token) + "\",";
       break;
     case 6:
       dataForDisplay += ifElse(String(token), "Power Factor", "pf");
+      jsonSend += "\"pf\":\"" + String(token) + "\"";
       break;
     default:
       dataForDisplay += ifElse(String(token), "Wifi", "");
@@ -82,8 +93,25 @@ void seperator(String data)
     token = strtok(NULL, ","); // Get the next token
     count++;
   }
+  jsonSend += "}";
 
   displayData(dataForDisplay);
+  Serial.println(jsonSend);
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST(jsonSend);
+
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    String payload = http.getString();
+    Serial.println(payload);
+  }else{
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+
+  }
+  
 }
 
 void setup()
